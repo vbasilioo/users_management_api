@@ -27,6 +27,15 @@ import { AbilityModule } from './ability/ability.module';
         database: configService.get('app.database.database'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
+        retryAttempts: 20,
+        retryDelay: 5000,
+        keepConnectionAlive: true,
+        connectTimeoutMS: 10000,
+        extra: {
+          max: 10,
+          connectionTimeoutMillis: 10000,
+        },
+        logging: process.env.NODE_ENV !== 'production',
       }),
     }),
     JwtModule.registerAsync({

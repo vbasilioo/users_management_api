@@ -25,7 +25,7 @@ async function createUserIfNotExists(
   console.log(`User ${userData.email} created successfully!`);
 }
 
-async function bootstrap(): Promise<void> {
+export async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule);
   const userRepository = app.get(UserRepository);
 
@@ -61,4 +61,6 @@ async function bootstrap(): Promise<void> {
   }
 }
 
-bootstrap(); 
+if (require.main === module) {
+  bootstrap();
+} 
