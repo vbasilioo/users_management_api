@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/application/services/users.service';
 import { LoginDto } from './dtos/login.dto';
 import { ApiResponseDto } from '../common/dtos/api-response.dto';
+import { User } from '../users/domain/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -36,5 +37,11 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     
     return ApiResponseDto.success('Successfully logged in', { accessToken });
+  }
+
+  async getProfile(user: User): Promise<ApiResponseDto<User>> {
+    // Omitir a senha do usuário na resposta
+    const { password, ...userWithoutPassword } = user;
+    return ApiResponseDto.success('User profile retrieved successfully', userWithoutPassword as User);
   }
 } 

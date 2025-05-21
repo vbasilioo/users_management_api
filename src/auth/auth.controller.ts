@@ -1,9 +1,10 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
 import { ApiResponseDto } from '../common/dtos/api-response.dto';
 import { Public } from './decorators/public.decorator';
+import { User } from '../users/domain/entities/user.entity';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -24,5 +25,21 @@ export class AuthController {
   })
   async login(@Body() loginDto: LoginDto): Promise<ApiResponseDto<{ accessToken: string }>> {
     return this.authService.login(loginDto);
+  }
+
+  @Get('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getProfile(@Req() req): Promise<ApiResponseDto<User>> {
+    return this.authService.getProfile(req.user);
   }
 } 
