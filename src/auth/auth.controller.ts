@@ -23,8 +23,21 @@ export class AuthController {
     status: 401,
     description: 'Invalid credentials',
   })
-  async login(@Body() loginDto: LoginDto): Promise<ApiResponseDto<{ accessToken: string }>> {
+  async login(@Body() loginDto: LoginDto): Promise<ApiResponseDto<{ accessToken: string; user: Partial<User> }>> {
     return this.authService.login(loginDto);
+  }
+
+  @Post('logout')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'User logout' })
+  @ApiResponse({
+    status: 200,
+    description: 'User successfully logged out',
+    type: ApiResponseDto,
+  })
+  async logout(@Req() req): Promise<ApiResponseDto<null>> {
+    const token = this.extractTokenFromHeader(req);
+    return this.authService.logout(token);
   }
 
   @Get('me')
@@ -41,5 +54,10 @@ export class AuthController {
   })
   async getProfile(@Req() req): Promise<ApiResponseDto<User>> {
     return this.authService.getProfile(req.user);
+  }
+
+  private extractTokenFromHeader(request: any): string | undefined {
+    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    return type === 'Bearer' ? token : undefined;
   }
 } 
