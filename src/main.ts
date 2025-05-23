@@ -4,8 +4,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  await new Promise(resolve => setTimeout(resolve, 3000));
-  
   const app = await NestFactory.create(AppModule);
   
   app.enableCors();
