@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { UsersService } from '../../application/services/users.service';
 import { CreateUserDto } from '../../application/dtos/create-user.dto';
 import { UpdateUserDto } from '../../application/dtos/update-user.dto';
-import { User } from '../../domain/entities/user.entity';
+import { User, UserRole } from '../../domain/entities/user.entity';
 import { ApiResponseDto } from '../../../common/dtos/api-response.dto';
 import { CheckAbility } from '../../../ability/decorators/check-ability.decorator';
 import { Action, AppAbility } from '../../../ability/ability.factory';
@@ -32,7 +32,7 @@ export class UsersController {
     description: 'Forbidden - Insufficient permissions',
   })
   @UseGuards(AbilityGuard)
-  @CheckAbility((ability: AppAbility) => ability.can(Action.Create, User))
+  @CheckAbility((ability: AppAbility) => ability.can(Action.Create, 'User'))
   async create(@Body() createUserDto: CreateUserDto): Promise<ApiResponseDto<User>> {
     const user = await this.usersService.create(createUserDto);
     return ApiResponseDto.success('User created successfully', user);
@@ -50,8 +50,14 @@ export class UsersController {
     description: 'Forbidden - Insufficient permissions',
   })
   @UseGuards(AbilityGuard)
-  @CheckAbility((ability: AppAbility) => ability.can(Action.Read, User))
-  async findAll(): Promise<ApiResponseDto<User[]>> {
+  @CheckAbility((ability: AppAbility) => ability.can(Action.Read, 'User'))
+  async findAll(@Req() req): Promise<ApiResponseDto<User[]>> {
+    const currentUser = req.user;
+    
+    if (currentUser.role === UserRole.USER) {
+      return ApiResponseDto.error('Only admin and manager roles can access the list of all users');
+    }
+    
     const users = await this.usersService.findAll();
     return ApiResponseDto.success('Users retrieved successfully', users);
   }
@@ -72,11 +78,11 @@ export class UsersController {
     description: 'Forbidden - Insufficient permissions',
   })
   @UseGuards(AbilityGuard)
-  @CheckAbility((ability: AppAbility) => ability.can(Action.Read, User))
+  @CheckAbility((ability: AppAbility) => ability.can(Action.Read, 'User'))
   async findOne(@Param('id') id: string, @Req() req): Promise<ApiResponseDto<User>> {
     const currentUser = req.user;
     
-    if (currentUser.id !== id && currentUser.role === 'user') {
+    if (currentUser.id !== id && currentUser.role === UserRole.USER) {
       return ApiResponseDto.error('You can only view your own profile');
     }
     
@@ -100,7 +106,7 @@ export class UsersController {
     description: 'Forbidden - Insufficient permissions',
   })
   @UseGuards(AbilityGuard)
-  @CheckAbility((ability: AppAbility) => ability.can(Action.Update, User))
+  @CheckAbility((ability: AppAbility) => ability.can(Action.Update, 'User'))
   async update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -108,11 +114,11 @@ export class UsersController {
   ): Promise<ApiResponseDto<User>> {
     const currentUser = req.user;
     
-    if (currentUser.id !== id && currentUser.role === 'user') {
+    if (currentUser.id !== id && currentUser.role === UserRole.USER) {
       return ApiResponseDto.error('You can only update your own profile');
     }
     
-    if (updateUserDto.role && currentUser.role !== 'admin') {
+    if (updateUserDto.role && currentUser.role !== UserRole.ADMIN) {
       delete updateUserDto.role;
     }
     
@@ -136,7 +142,7 @@ export class UsersController {
     description: 'Forbidden - Insufficient permissions',
   })
   @UseGuards(AbilityGuard)
-  @CheckAbility((ability: AppAbility) => ability.can(Action.Delete, User))
+  @CheckAbility((ability: AppAbility) => ability.can(Action.Delete, 'User'))
   async remove(@Param('id') id: string): Promise<ApiResponseDto<null>> {
     await this.usersService.remove(id);
     return ApiResponseDto.success('User deleted successfully');

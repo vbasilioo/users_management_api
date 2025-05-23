@@ -37,7 +37,7 @@ export class AuthController {
   })
   async logout(@Req() req): Promise<ApiResponseDto<null>> {
     const token = this.extractTokenFromHeader(req);
-    return this.authService.logout(token);
+    return this.authService.logout(token || '');
   }
 
   @Get('me')
