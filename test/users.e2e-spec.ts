@@ -266,8 +266,8 @@ describe('UsersController (e2e)', () => {
         });
 
       if (response.status === 200) {
-        expect(response.body).toHaveProperty('email', ADMIN_EMAIL);
-        expect(response.body).toHaveProperty('role', 'admin');
+        expect(response.body.data).toHaveProperty('email', ADMIN_EMAIL);
+        expect(response.body.data).toHaveProperty('role', 'admin');
       }
     });
 
@@ -280,8 +280,8 @@ describe('UsersController (e2e)', () => {
         });
 
       if (response.status === 200) {
-        expect(response.body).toHaveProperty('email', MANAGER_EMAIL);
-        expect(response.body).toHaveProperty('role', 'manager');
+        expect(response.body.data).toHaveProperty('email', MANAGER_EMAIL);
+        expect(response.body.data).toHaveProperty('role', 'manager');
       }
     });
 
@@ -294,8 +294,8 @@ describe('UsersController (e2e)', () => {
         });
 
       if (response.status === 200) {
-        expect(response.body).toHaveProperty('email', USER_EMAIL);
-        expect(response.body).toHaveProperty('role', 'user');
+        expect(response.body.data).toHaveProperty('email', USER_EMAIL);
+        expect(response.body.data).toHaveProperty('role', 'user');
       }
     });
   });
@@ -421,8 +421,8 @@ describe('UsersController (e2e)', () => {
         });
 
       if (response.status === 200) {
-        expect(response.body).toHaveProperty('id', userId);
-        expect(response.body).toHaveProperty('email', USER_EMAIL);
+        expect(response.body.data).toHaveProperty('id', userId);
+        expect(response.body.data).toHaveProperty('email', USER_EMAIL);
       }
     });
 
@@ -440,7 +440,7 @@ describe('UsersController (e2e)', () => {
         });
 
       if (response.status === 200) {
-        expect(response.body).toHaveProperty('id', userId);
+        expect(response.body.data).toHaveProperty('id', userId);
       }
     });
 

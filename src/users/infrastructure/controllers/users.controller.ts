@@ -12,6 +12,7 @@ import { FindAllUsersUseCase } from '../../application/use-cases/find-all-users.
 import { FindUserByIdUseCase } from '../../application/use-cases/find-user-by-id.use-case';
 import { UpdateUserUseCase } from '../../application/use-cases/update-user.use-case';
 import { RemoveUserUseCase } from '../../application/use-cases/remove-user.use-case';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -64,11 +65,30 @@ export class UsersController {
     const currentUser = req.user;
     
     if (currentUser.role === UserRole.USER) {
-      return ApiResponseDto.error('Only admin and manager roles can access the list of all users');
+      throw new HttpException('Only admin and manager roles can access the list of all users', HttpStatus.FORBIDDEN);
     }
     
     const users = await this.findAllUsersUseCase.execute();
     return ApiResponseDto.success('Users retrieved successfully', users);
+  }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile',
+    type: ApiResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @UseGuards(AbilityGuard)
+  @CheckAbility((ability: AppAbility) => ability.can(Action.Read, 'User'))
+  async getProfile(@Req() req): Promise<ApiResponseDto<User>> {
+    const currentUser = req.user;
+    const { password, ...userWithoutPassword } = currentUser;
+    return ApiResponseDto.success('User profile retrieved successfully', userWithoutPassword as User);
   }
 
   @Get(':id')
@@ -92,7 +112,7 @@ export class UsersController {
     const currentUser = req.user;
     
     if (currentUser.id !== id && currentUser.role === UserRole.USER) {
-      return ApiResponseDto.error('You can only view your own profile');
+      throw new HttpException('You can only view your own profile', HttpStatus.FORBIDDEN);
     }
     
     const user = await this.findUserByIdUseCase.execute(id);
@@ -124,7 +144,7 @@ export class UsersController {
     const currentUser = req.user;
     
     if (currentUser.id !== id && currentUser.role === UserRole.USER) {
-      return ApiResponseDto.error('You can only update your own profile');
+      throw new HttpException('You can only update your own profile', HttpStatus.FORBIDDEN);
     }
     
     if (updateUserDto.role && currentUser.role !== UserRole.ADMIN) {
