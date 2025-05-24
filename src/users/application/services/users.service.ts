@@ -1,69 +1,46 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { UserRepository } from '../../infrastructure/repositories/user.repository';
+import { Injectable } from '@nestjs/common';
+import { User } from '../../domain/entities/user.entity';
 import { CreateUserDto } from '../dtos/create-user.dto';
 import { UpdateUserDto } from '../dtos/update-user.dto';
-import { User } from '../../domain/entities/user.entity';
+import { FindUserByEmailUseCase } from '../use-cases/find-user-by-email.use-case';
+import { FindUserByIdUseCase } from '../use-cases/find-user-by-id.use-case';
+import { FindAllUsersUseCase } from '../use-cases/find-all-users.use-case';
+import { CreateUserUseCase } from '../use-cases/create-user.use-case';
+import { UpdateUserUseCase } from '../use-cases/update-user.use-case';
+import { RemoveUserUseCase } from '../use-cases/remove-user.use-case';
 
 @Injectable()
 export class UsersService {
-  constructor(private userRepository: UserRepository) {}
+  constructor(
+    private findUserByEmailUseCase: FindUserByEmailUseCase,
+    private findUserByIdUseCase: FindUserByIdUseCase,
+    private findAllUsersUseCase: FindAllUsersUseCase,
+    private createUserUseCase: CreateUserUseCase,
+    private updateUserUseCase: UpdateUserUseCase,
+    private removeUserUseCase: RemoveUserUseCase
+  ) {}
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.findAll();
+    return this.findAllUsersUseCase.execute();
   }
 
   async findById(id: string): Promise<User> {
-    const user = await this.userRepository.findById(id);
-    if (!user) {
-      throw new NotFoundException(`User with ID "${id}" not found`);
-    }
-    return user;
+    return this.findUserByIdUseCase.execute(id);
   }
 
   async findByEmail(email: string): Promise<User> {
-    const user = await this.userRepository.findByEmail(email);
-    if (!user) {
-      throw new NotFoundException(`User with email "${email}" not found`);
-    }
-    return user;
+    return this.findUserByEmailUseCase.execute(email);
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const existingUser = await this.userRepository.findByEmail(createUserDto.email);
-    
-    if (existingUser) {
-      throw new ConflictException('Email already in use');
-    }
-    
-    return this.userRepository.create(createUserDto);
+    return this.createUserUseCase.execute(createUserDto);
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    await this.findById(id);
-    
-    if (updateUserDto.email) {
-      const existingUser = await this.userRepository.findByEmail(updateUserDto.email);
-      if (existingUser && existingUser.id !== id) {
-        throw new ConflictException('Email already in use');
-      }
-    }
-    
-    const updatedUser = await this.userRepository.update(id, updateUserDto);
-    
-    if (!updatedUser) {
-      throw new NotFoundException(`User with ID "${id}" not found`);
-    }
-    
-    return updatedUser;
+    return this.updateUserUseCase.execute(id, updateUserDto);
   }
 
   async remove(id: string): Promise<void> {
-    await this.findById(id);
-    
-    const deleted = await this.userRepository.delete(id);
-    
-    if (!deleted) {
-      throw new NotFoundException(`User with ID "${id}" not found`);
-    }
+    return this.removeUserUseCase.execute(id);
   }
 } 

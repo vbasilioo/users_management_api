@@ -1,15 +1,21 @@
 import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
 import { ApiResponseDto } from '../common/dtos/api-response.dto';
 import { Public } from './decorators/public.decorator';
 import { User } from '../users/domain/entities/user.entity';
+import { LoginUseCase } from './application/use-cases/login.use-case';
+import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { GetProfileUseCase } from './application/use-cases/get-profile.use-case';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private loginUseCase: LoginUseCase,
+    private logoutUseCase: LogoutUseCase,
+    private getProfileUseCase: GetProfileUseCase,
+  ) {}
 
   @Public()
   @Post('login')
@@ -24,7 +30,7 @@ export class AuthController {
     description: 'Invalid credentials',
   })
   async login(@Body() loginDto: LoginDto): Promise<ApiResponseDto<{ accessToken: string; user: Partial<User> }>> {
-    return this.authService.login(loginDto);
+    return this.loginUseCase.execute(loginDto);
   }
 
   @Post('logout')
@@ -37,7 +43,7 @@ export class AuthController {
   })
   async logout(@Req() req): Promise<ApiResponseDto<null>> {
     const token = this.extractTokenFromHeader(req);
-    return this.authService.logout(token || '');
+    return this.logoutUseCase.execute(token || '');
   }
 
   @Get('me')
@@ -53,7 +59,7 @@ export class AuthController {
     description: 'Unauthorized',
   })
   async getProfile(@Req() req): Promise<ApiResponseDto<User>> {
-    return this.authService.getProfile(req.user);
+    return this.getProfileUseCase.execute(req.user);
   }
 
   private extractTokenFromHeader(request: any): string | undefined {

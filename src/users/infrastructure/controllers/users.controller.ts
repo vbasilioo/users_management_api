@@ -1,6 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { UsersService } from '../../application/services/users.service';
 import { CreateUserDto } from '../../application/dtos/create-user.dto';
 import { UpdateUserDto } from '../../application/dtos/update-user.dto';
 import { User, UserRole } from '../../domain/entities/user.entity';
@@ -8,13 +7,23 @@ import { ApiResponseDto } from '../../../common/dtos/api-response.dto';
 import { CheckAbility } from '../../../ability/decorators/check-ability.decorator';
 import { Action, AppAbility } from '../../../ability/ability.factory';
 import { AbilityGuard } from '../../../ability/guards/ability.guard';
-import { UseGuards } from '@nestjs/common';
+import { CreateUserUseCase } from '../../application/use-cases/create-user.use-case';
+import { FindAllUsersUseCase } from '../../application/use-cases/find-all-users.use-case';
+import { FindUserByIdUseCase } from '../../application/use-cases/find-user-by-id.use-case';
+import { UpdateUserUseCase } from '../../application/use-cases/update-user.use-case';
+import { RemoveUserUseCase } from '../../application/use-cases/remove-user.use-case';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly createUserUseCase: CreateUserUseCase,
+    private readonly findAllUsersUseCase: FindAllUsersUseCase,
+    private readonly findUserByIdUseCase: FindUserByIdUseCase,
+    private readonly updateUserUseCase: UpdateUserUseCase,
+    private readonly removeUserUseCase: RemoveUserUseCase
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new user' })
@@ -34,7 +43,7 @@ export class UsersController {
   @UseGuards(AbilityGuard)
   @CheckAbility((ability: AppAbility) => ability.can(Action.Create, 'User'))
   async create(@Body() createUserDto: CreateUserDto): Promise<ApiResponseDto<User>> {
-    const user = await this.usersService.create(createUserDto);
+    const user = await this.createUserUseCase.execute(createUserDto);
     return ApiResponseDto.success('User created successfully', user);
   }
 
@@ -58,7 +67,7 @@ export class UsersController {
       return ApiResponseDto.error('Only admin and manager roles can access the list of all users');
     }
     
-    const users = await this.usersService.findAll();
+    const users = await this.findAllUsersUseCase.execute();
     return ApiResponseDto.success('Users retrieved successfully', users);
   }
 
@@ -86,7 +95,7 @@ export class UsersController {
       return ApiResponseDto.error('You can only view your own profile');
     }
     
-    const user = await this.usersService.findById(id);
+    const user = await this.findUserByIdUseCase.execute(id);
     return ApiResponseDto.success('User retrieved successfully', user);
   }
 
@@ -122,7 +131,7 @@ export class UsersController {
       delete updateUserDto.role;
     }
     
-    const user = await this.usersService.update(id, updateUserDto);
+    const user = await this.updateUserUseCase.execute(id, updateUserDto);
     return ApiResponseDto.success('User updated successfully', user);
   }
 
@@ -144,7 +153,7 @@ export class UsersController {
   @UseGuards(AbilityGuard)
   @CheckAbility((ability: AppAbility) => ability.can(Action.Delete, 'User'))
   async remove(@Param('id') id: string): Promise<ApiResponseDto<null>> {
-    await this.usersService.remove(id);
+    await this.removeUserUseCase.execute(id);
     return ApiResponseDto.success('User deleted successfully');
   }
 } 
