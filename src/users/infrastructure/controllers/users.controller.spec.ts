@@ -8,6 +8,11 @@ import { ApiResponseDto } from '../../../common/dtos/api-response.dto';
 import { AbilityFactory } from '../../../ability/ability.factory';
 import { AbilityGuard } from '../../../ability/guards/ability.guard';
 import { Reflector } from '@nestjs/core';
+import { CreateUserUseCase } from '../../application/use-cases/create-user.use-case';
+import { FindAllUsersUseCase } from '../../application/use-cases/find-all-users.use-case';
+import { FindUserByIdUseCase } from '../../application/use-cases/find-user-by-id.use-case';
+import { UpdateUserUseCase } from '../../application/use-cases/update-user.use-case';
+import { RemoveUserUseCase } from '../../application/use-cases/remove-user.use-case';
 
 const mockUsersService = () => ({
   findAll: jest.fn(),
@@ -15,6 +20,26 @@ const mockUsersService = () => ({
   create: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
+});
+
+const mockCreateUserUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const mockFindAllUsersUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const mockFindUserByIdUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const mockUpdateUserUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const mockRemoveUserUseCase = () => ({
+  execute: jest.fn(),
 });
 
 const mockAbilityFactory = () => ({
@@ -37,6 +62,11 @@ jest.mock('../../../ability/guards/ability.guard', () => ({
 describe('UsersController', () => {
   let usersController: UsersController;
   let usersService: any;
+  let createUserUseCase: any;
+  let findAllUsersUseCase: any;
+  let findUserByIdUseCase: any;
+  let updateUserUseCase: any;
+  let removeUserUseCase: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -45,6 +75,26 @@ describe('UsersController', () => {
         {
           provide: UsersService,
           useFactory: mockUsersService,
+        },
+        {
+          provide: CreateUserUseCase,
+          useFactory: mockCreateUserUseCase,
+        },
+        {
+          provide: FindAllUsersUseCase,
+          useFactory: mockFindAllUsersUseCase,
+        },
+        {
+          provide: FindUserByIdUseCase,
+          useFactory: mockFindUserByIdUseCase,
+        },
+        {
+          provide: UpdateUserUseCase,
+          useFactory: mockUpdateUserUseCase,
+        },
+        {
+          provide: RemoveUserUseCase,
+          useFactory: mockRemoveUserUseCase,
         },
         {
           provide: AbilityFactory,
@@ -62,6 +112,11 @@ describe('UsersController', () => {
 
     usersController = module.get<UsersController>(UsersController);
     usersService = module.get<UsersService>(UsersService);
+    createUserUseCase = module.get<CreateUserUseCase>(CreateUserUseCase);
+    findAllUsersUseCase = module.get<FindAllUsersUseCase>(FindAllUsersUseCase);
+    findUserByIdUseCase = module.get<FindUserByIdUseCase>(FindUserByIdUseCase);
+    updateUserUseCase = module.get<UpdateUserUseCase>(UpdateUserUseCase);
+    removeUserUseCase = module.get<RemoveUserUseCase>(RemoveUserUseCase);
   });
 
   describe('findAll', () => {
@@ -87,15 +142,38 @@ describe('UsersController', () => {
         },
       ];
 
-      usersService.findAll.mockResolvedValue(mockUsers);
+      findAllUsersUseCase.execute.mockResolvedValue(mockUsers);
 
-      const result = await usersController.findAll();
+      const mockRequest = {
+        user: {
+          id: '1',
+          role: UserRole.ADMIN,
+        },
+      };
+
+      const result = await usersController.findAll(mockRequest);
       
       expect(result).toBeInstanceOf(ApiResponseDto);
       expect(result.error).toBeFalsy();
       expect(result.message).toBe('Users retrieved successfully');
       expect(result.data).toEqual(mockUsers);
-      expect(usersService.findAll).toHaveBeenCalled();
+      expect(findAllUsersUseCase.execute).toHaveBeenCalled();
+    });
+
+    it('should return error when regular user tries to access all users', async () => {
+      const mockRequest = {
+        user: {
+          id: '2',
+          role: UserRole.USER,
+        },
+      };
+
+      const result = await usersController.findAll(mockRequest);
+      
+      expect(result).toBeInstanceOf(ApiResponseDto);
+      expect(result.error).toBeTruthy();
+      expect(result.message).toBe('Only admin and manager roles can access the list of all users');
+      expect(findAllUsersUseCase.execute).not.toHaveBeenCalled();
     });
   });
 
@@ -111,7 +189,7 @@ describe('UsersController', () => {
         updatedAt: new Date(),
       };
 
-      usersService.findById.mockResolvedValue(mockUser);
+      findUserByIdUseCase.execute.mockResolvedValue(mockUser);
 
       const mockRequest = {
         user: {
@@ -126,7 +204,7 @@ describe('UsersController', () => {
       expect(result.error).toBeFalsy();
       expect(result.message).toBe('User retrieved successfully');
       expect(result.data).toEqual(mockUser);
-      expect(usersService.findById).toHaveBeenCalledWith('1');
+      expect(findUserByIdUseCase.execute).toHaveBeenCalledWith('1');
     });
 
     it('should return error when regular user tries to access another user profile', async () => {
@@ -142,7 +220,7 @@ describe('UsersController', () => {
       expect(result).toBeInstanceOf(ApiResponseDto);
       expect(result.error).toBeTruthy();
       expect(result.message).toBe('You can only view your own profile');
-      expect(usersService.findById).not.toHaveBeenCalled();
+      expect(findUserByIdUseCase.execute).not.toHaveBeenCalled();
     });
   });
 
@@ -163,7 +241,7 @@ describe('UsersController', () => {
         updatedAt: new Date(),
       };
 
-      usersService.create.mockResolvedValue(mockCreatedUser);
+      createUserUseCase.execute.mockResolvedValue(mockCreatedUser);
 
       const result = await usersController.create(createUserDto);
       
@@ -171,7 +249,7 @@ describe('UsersController', () => {
       expect(result.error).toBeFalsy();
       expect(result.message).toBe('User created successfully');
       expect(result.data).toEqual(mockCreatedUser);
-      expect(usersService.create).toHaveBeenCalledWith(createUserDto);
+      expect(createUserUseCase.execute).toHaveBeenCalledWith(createUserDto);
     });
   });
 
@@ -190,7 +268,7 @@ describe('UsersController', () => {
         updatedAt: new Date(),
       };
 
-      usersService.update.mockResolvedValue(mockUpdatedUser);
+      updateUserUseCase.execute.mockResolvedValue(mockUpdatedUser);
 
       const mockRequest = {
         user: {
@@ -205,7 +283,7 @@ describe('UsersController', () => {
       expect(result.error).toBeFalsy();
       expect(result.message).toBe('User updated successfully');
       expect(result.data).toEqual(mockUpdatedUser);
-      expect(usersService.update).toHaveBeenCalledWith('1', updateUserDto);
+      expect(updateUserUseCase.execute).toHaveBeenCalledWith('1', updateUserDto);
     });
 
     it('should return error when regular user tries to update another user profile', async () => {
@@ -225,7 +303,7 @@ describe('UsersController', () => {
       expect(result).toBeInstanceOf(ApiResponseDto);
       expect(result.error).toBeTruthy();
       expect(result.message).toBe('You can only update your own profile');
-      expect(usersService.update).not.toHaveBeenCalled();
+      expect(updateUserUseCase.execute).not.toHaveBeenCalled();
     });
 
     it('should remove role from updateDto when non-admin tries to update role', async () => {
@@ -243,7 +321,7 @@ describe('UsersController', () => {
         updatedAt: new Date(),
       };
 
-      usersService.update.mockResolvedValue(mockUpdatedUser);
+      updateUserUseCase.execute.mockResolvedValue(mockUpdatedUser);
 
       const mockRequest = {
         user: {
@@ -252,23 +330,28 @@ describe('UsersController', () => {
         },
       };
 
-      await usersController.update('1', updateUserDto, mockRequest);
+      const result = await usersController.update('1', updateUserDto, mockRequest);
       
-      expect(updateUserDto.role).toBeUndefined();
-      expect(usersService.update).toHaveBeenCalledWith('1', { name: 'Updated Name' });
+      expect(result).toBeInstanceOf(ApiResponseDto);
+      expect(result.error).toBeFalsy();
+      expect(result.message).toBe('User updated successfully');
+      expect(result.data).toEqual(mockUpdatedUser);
+      
+      const expectedDto = { name: 'Updated Name' };
+      expect(updateUserUseCase.execute).toHaveBeenCalledWith('1', expectedDto);
     });
   });
 
   describe('remove', () => {
     it('should delete a user', async () => {
-      usersService.remove.mockResolvedValue(undefined);
+      removeUserUseCase.execute.mockResolvedValue(undefined);
 
       const result = await usersController.remove('1');
       
       expect(result).toBeInstanceOf(ApiResponseDto);
       expect(result.error).toBeFalsy();
       expect(result.message).toBe('User deleted successfully');
-      expect(usersService.remove).toHaveBeenCalledWith('1');
+      expect(removeUserUseCase.execute).toHaveBeenCalledWith('1');
     });
   });
 }); 

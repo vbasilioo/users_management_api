@@ -5,6 +5,12 @@ import { UserRepository } from '../../infrastructure/repositories/user.repositor
 import { User, UserRole } from '../../domain/entities/user.entity';
 import { CreateUserDto } from '../dtos/create-user.dto';
 import { UpdateUserDto } from '../dtos/update-user.dto';
+import { CreateUserUseCase } from '../use-cases/create-user.use-case';
+import { FindAllUsersUseCase } from '../use-cases/find-all-users.use-case';
+import { FindUserByIdUseCase } from '../use-cases/find-user-by-id.use-case';
+import { FindUserByEmailUseCase } from '../use-cases/find-user-by-email.use-case';
+import { UpdateUserUseCase } from '../use-cases/update-user.use-case';
+import { RemoveUserUseCase } from '../use-cases/remove-user.use-case';
 
 const mockUserRepository = () => ({
   findAll: jest.fn(),
@@ -15,9 +21,39 @@ const mockUserRepository = () => ({
   delete: jest.fn(),
 });
 
+const mockFindUserByEmailUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const mockFindUserByIdUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const mockFindAllUsersUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const mockCreateUserUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const mockUpdateUserUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const mockRemoveUserUseCase = () => ({
+  execute: jest.fn(),
+});
+
 describe('UsersService', () => {
   let usersService: UsersService;
   let userRepository;
+  let findUserByEmailUseCase: any;
+  let findUserByIdUseCase: any;
+  let findAllUsersUseCase: any;
+  let createUserUseCase: any;
+  let updateUserUseCase: any;
+  let removeUserUseCase: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -27,11 +63,41 @@ describe('UsersService', () => {
           provide: UserRepository,
           useFactory: mockUserRepository,
         },
+        {
+          provide: FindUserByEmailUseCase,
+          useFactory: mockFindUserByEmailUseCase,
+        },
+        {
+          provide: FindUserByIdUseCase,
+          useFactory: mockFindUserByIdUseCase,
+        },
+        {
+          provide: FindAllUsersUseCase,
+          useFactory: mockFindAllUsersUseCase,
+        },
+        {
+          provide: CreateUserUseCase,
+          useFactory: mockCreateUserUseCase,
+        },
+        {
+          provide: UpdateUserUseCase,
+          useFactory: mockUpdateUserUseCase,
+        },
+        {
+          provide: RemoveUserUseCase,
+          useFactory: mockRemoveUserUseCase,
+        },
       ],
     }).compile();
 
     usersService = module.get<UsersService>(UsersService);
     userRepository = module.get<UserRepository>(UserRepository);
+    findUserByEmailUseCase = module.get<FindUserByEmailUseCase>(FindUserByEmailUseCase);
+    findUserByIdUseCase = module.get<FindUserByIdUseCase>(FindUserByIdUseCase);
+    findAllUsersUseCase = module.get<FindAllUsersUseCase>(FindAllUsersUseCase);
+    createUserUseCase = module.get<CreateUserUseCase>(CreateUserUseCase);
+    updateUserUseCase = module.get<UpdateUserUseCase>(UpdateUserUseCase);
+    removeUserUseCase = module.get<RemoveUserUseCase>(RemoveUserUseCase);
   });
 
   describe('findAll', () => {
@@ -40,53 +106,53 @@ describe('UsersService', () => {
         { id: '1', name: 'User 1', email: 'user1@example.com' },
         { id: '2', name: 'User 2', email: 'user2@example.com' },
       ];
-      userRepository.findAll.mockResolvedValue(mockUsers);
+      findAllUsersUseCase.execute.mockResolvedValue(mockUsers);
 
       const result = await usersService.findAll();
       expect(result).toEqual(mockUsers);
-      expect(userRepository.findAll).toHaveBeenCalled();
+      expect(findAllUsersUseCase.execute).toHaveBeenCalled();
     });
   });
 
   describe('findById', () => {
     it('should return a user if found', async () => {
       const mockUser = { id: '1', name: 'User 1', email: 'user1@example.com' };
-      userRepository.findById.mockResolvedValue(mockUser);
+      findUserByIdUseCase.execute.mockResolvedValue(mockUser);
 
       const result = await usersService.findById('1');
       expect(result).toEqual(mockUser);
-      expect(userRepository.findById).toHaveBeenCalledWith('1');
+      expect(findUserByIdUseCase.execute).toHaveBeenCalledWith('1');
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      userRepository.findById.mockResolvedValue(null);
+      findUserByIdUseCase.execute.mockRejectedValue(new NotFoundException(`User with ID "999" not found`));
 
       await expect(usersService.findById('999')).rejects.toThrow(NotFoundException);
-      expect(userRepository.findById).toHaveBeenCalledWith('999');
+      expect(findUserByIdUseCase.execute).toHaveBeenCalledWith('999');
     });
   });
 
   describe('findByEmail', () => {
     it('should return a user if found by email', async () => {
       const mockUser = { id: '1', name: 'User 1', email: 'user1@example.com' };
-      userRepository.findByEmail.mockResolvedValue(mockUser);
+      findUserByEmailUseCase.execute.mockResolvedValue(mockUser);
 
       const result = await usersService.findByEmail('user1@example.com');
       expect(result).toEqual(mockUser);
-      expect(userRepository.findByEmail).toHaveBeenCalledWith('user1@example.com');
+      expect(findUserByEmailUseCase.execute).toHaveBeenCalledWith('user1@example.com');
     });
 
     it('should throw NotFoundException if user not found by email', async () => {
-      userRepository.findByEmail.mockResolvedValue(null);
+      findUserByEmailUseCase.execute.mockRejectedValue(new NotFoundException(`User with email "nonexistent@example.com" not found`));
 
       await expect(usersService.findByEmail('nonexistent@example.com')).rejects.toThrow(NotFoundException);
-      expect(userRepository.findByEmail).toHaveBeenCalledWith('nonexistent@example.com');
+      expect(findUserByEmailUseCase.execute).toHaveBeenCalledWith('nonexistent@example.com');
     });
   });
 
   describe('create', () => {
     it('should create a new user', async () => {
-      const createUserDto: CreateUserDto = {
+      const createUserDto = {
         name: 'New User',
         email: 'newuser@example.com',
         password: 'Password123!',
@@ -100,126 +166,87 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       };
 
-      userRepository.findByEmail.mockResolvedValue(null);
-      userRepository.create.mockResolvedValue(mockCreatedUser);
+      createUserUseCase.execute.mockResolvedValue(mockCreatedUser);
 
       const result = await usersService.create(createUserDto);
       expect(result).toEqual(mockCreatedUser);
-      expect(userRepository.findByEmail).toHaveBeenCalledWith(createUserDto.email);
-      expect(userRepository.create).toHaveBeenCalledWith(createUserDto);
+      expect(createUserUseCase.execute).toHaveBeenCalledWith(createUserDto);
     });
 
     it('should throw ConflictException if email already exists', async () => {
-      const createUserDto: CreateUserDto = {
+      const createUserDto = {
         name: 'New User',
         email: 'existing@example.com',
         password: 'Password123!',
         role: UserRole.USER,
       };
       
-      userRepository.findByEmail.mockResolvedValue({ id: '1', email: 'existing@example.com' });
+      createUserUseCase.execute.mockRejectedValue(new ConflictException('Email already in use'));
 
       await expect(usersService.create(createUserDto)).rejects.toThrow(ConflictException);
-      expect(userRepository.findByEmail).toHaveBeenCalledWith(createUserDto.email);
-      expect(userRepository.create).not.toHaveBeenCalled();
+      expect(createUserUseCase.execute).toHaveBeenCalledWith(createUserDto);
     });
   });
 
   describe('update', () => {
     it('should update an existing user', async () => {
-      const updateUserDto: UpdateUserDto = {
+      const updateUserDto = {
         name: 'Updated Name',
-      };
-      
-      const mockUser = {
-        id: '1',
-        name: 'Original Name',
-        email: 'user1@example.com',
-        role: UserRole.USER,
       };
       
       const mockUpdatedUser = {
-        ...mockUser,
+        id: '1',
         name: 'Updated Name',
+        email: 'user1@example.com',
+        role: UserRole.USER,
       };
 
-      userRepository.findById.mockResolvedValue(mockUser);
-      userRepository.update.mockResolvedValue(mockUpdatedUser);
+      updateUserUseCase.execute.mockResolvedValue(mockUpdatedUser);
 
       const result = await usersService.update('1', updateUserDto);
       expect(result).toEqual(mockUpdatedUser);
-      expect(userRepository.findById).toHaveBeenCalledWith('1');
-      expect(userRepository.update).toHaveBeenCalledWith('1', updateUserDto);
+      expect(updateUserUseCase.execute).toHaveBeenCalledWith('1', updateUserDto);
     });
 
     it('should throw NotFoundException if user to update not found', async () => {
-      const updateUserDto: UpdateUserDto = {
-        name: 'Updated Name',
-      };
-      
-      userRepository.findById.mockResolvedValue(null);
+      updateUserUseCase.execute.mockRejectedValue(new NotFoundException(`User with ID "999" not found`));
 
-      await expect(usersService.update('999', updateUserDto)).rejects.toThrow(NotFoundException);
-      expect(userRepository.findById).toHaveBeenCalledWith('999');
-      expect(userRepository.update).not.toHaveBeenCalled();
+      await expect(usersService.update('999', { name: 'Updated Name' })).rejects.toThrow(NotFoundException);
+      expect(updateUserUseCase.execute).toHaveBeenCalledWith('999', { name: 'Updated Name' });
     });
 
     it('should throw ConflictException if updating to an email that already exists for another user', async () => {
-      const updateUserDto: UpdateUserDto = {
+      const updateUserDto = {
         email: 'existing@example.com',
       };
       
-      const mockUser = {
-        id: '1',
-        name: 'User 1',
-        email: 'user1@example.com',
-      };
-      
-      const mockExistingUser = {
-        id: '2',
-        name: 'User 2',
-        email: 'existing@example.com',
-      };
-
-      userRepository.findById.mockResolvedValue(mockUser);
-      userRepository.findByEmail.mockResolvedValue(mockExistingUser);
+      updateUserUseCase.execute.mockRejectedValue(new ConflictException('Email already in use'));
 
       await expect(usersService.update('1', updateUserDto)).rejects.toThrow(ConflictException);
-      expect(userRepository.findById).toHaveBeenCalledWith('1');
-      expect(userRepository.findByEmail).toHaveBeenCalledWith(updateUserDto.email);
-      expect(userRepository.update).not.toHaveBeenCalled();
+      expect(updateUserUseCase.execute).toHaveBeenCalledWith('1', updateUserDto);
     });
   });
 
   describe('remove', () => {
     it('should delete a user successfully', async () => {
-      const mockUser = { id: '1', name: 'User 1', email: 'user1@example.com' };
-      
-      userRepository.findById.mockResolvedValue(mockUser);
-      userRepository.delete.mockResolvedValue(true);
+      removeUserUseCase.execute.mockResolvedValue(undefined);
 
       await usersService.remove('1');
-      expect(userRepository.findById).toHaveBeenCalledWith('1');
-      expect(userRepository.delete).toHaveBeenCalledWith('1');
+      expect(removeUserUseCase.execute).toHaveBeenCalledWith('1');
     });
 
     it('should throw NotFoundException if user to delete not found', async () => {
-      userRepository.findById.mockResolvedValue(null);
+      removeUserUseCase.execute.mockRejectedValue(new NotFoundException(`User with ID "999" not found`));
 
       await expect(usersService.remove('999')).rejects.toThrow(NotFoundException);
-      expect(userRepository.findById).toHaveBeenCalledWith('999');
-      expect(userRepository.delete).not.toHaveBeenCalled();
+      expect(removeUserUseCase.execute).toHaveBeenCalledWith('999');
     });
 
     it('should throw NotFoundException if deletion fails', async () => {
-      const mockUser = { id: '1', name: 'User 1', email: 'user1@example.com' };
-      
-      userRepository.findById.mockResolvedValue(mockUser);
-      userRepository.delete.mockResolvedValue(false);
+      removeUserUseCase.execute.mockRejectedValue(new NotFoundException(`User with ID "1" not found`));
 
       await expect(usersService.remove('1')).rejects.toThrow(NotFoundException);
-      expect(userRepository.findById).toHaveBeenCalledWith('1');
-      expect(userRepository.delete).toHaveBeenCalledWith('1');
+      expect(removeUserUseCase.execute).toHaveBeenCalledWith('1');
     });
   });
 }); 
