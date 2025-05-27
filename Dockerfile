@@ -2,6 +2,9 @@ FROM node:22-alpine
 
 WORKDIR /usr/src/app
 
+# Instala o netcat para verificação do banco de dados
+RUN apk add --no-cache netcat-openbsd
+
 COPY package*.json ./
 COPY pnpm-lock.yaml ./
 
@@ -13,8 +16,10 @@ COPY . .
 RUN rm -rf dist || true
 RUN pnpm build
 
-RUN ls -la dist || echo "Build failed - dist directory not created"
+# Dá permissão de execução ao script de entrada
+RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 3000
 
-CMD ["pnpm", "start:prod"] 
+# Usa o script de entrada como ponto de entrada
+ENTRYPOINT ["./docker-entrypoint.sh"] 

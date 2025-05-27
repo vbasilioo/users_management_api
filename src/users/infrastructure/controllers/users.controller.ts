@@ -13,6 +13,7 @@ import { FindUserByIdUseCase } from '../../application/use-cases/find-user-by-id
 import { UpdateUserUseCase } from '../../application/use-cases/update-user.use-case';
 import { RemoveUserUseCase } from '../../application/use-cases/remove-user.use-case';
 import { FindAllUsersDto } from '../../application/dtos/find-all-users.dto';
+import { PaginatedResponse } from '../../domain/types/paginated-response.type';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -64,7 +65,7 @@ export class UsersController {
   })
   @UseGuards(AbilityGuard)
   @CheckAbility((ability: AppAbility) => ability.can(Action.Read, 'User'))
-  async findAll(@Query() query: FindAllUsersDto, @Req() req): Promise<User[]> {
+  async findAll(@Query() query: FindAllUsersDto, @Req() req): Promise<ApiResponseDto<PaginatedResponse<User>>> {
     const currentUser = req.user;
     
     if (currentUser.role === UserRole.USER) {
@@ -72,7 +73,7 @@ export class UsersController {
     }
     
     const result = await this.findAllUsersUseCase.execute(query);
-    return result.data;
+    return ApiResponseDto.success('Users retrieved successfully', result);
   }
 
   @Get('me')
