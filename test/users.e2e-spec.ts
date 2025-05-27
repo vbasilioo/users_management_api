@@ -34,8 +34,8 @@ describe('UsersController (e2e)', () => {
         .get('/users')
         .set('Authorization', `Bearer ${adminToken}`);
       
-      if (response.status === 200) {
-        const users = response.body as User[];
+      if (response.status === 200 && response.body.data && response.body.data.data) {
+        const users = response.body.data.data as User[];
         for (const user of users) {
           if (user.email === ADMIN_EMAIL) adminId = user.id;
           if (user.email === MANAGER_EMAIL) managerId = user.id;
@@ -92,7 +92,7 @@ describe('UsersController (e2e)', () => {
           .send(newUser);
 
         if (response.status === 201) {
-          testUserId = response.body.id;
+          testUserId = response.body.data.id;
           console.log('Usuário de teste criado com sucesso com ID:', testUserId);
           return testUserId;
         }
@@ -219,11 +219,15 @@ describe('UsersController (e2e)', () => {
       
       expect([200, 403, 404, 500]).toContain(response.status);
       if (response.status === 200) {
-        if (response.body && response.body.data && Array.isArray(response.body.data)) {
-          expect(Array.isArray(response.body.data)).toBe(true);
-        } else {
-          expect(Array.isArray(response.body)).toBe(true);
-        }
+        expect(response.body.error).toBeFalsy();
+        expect(response.body.message).toBe('Users retrieved successfully');
+        expect(response.body.data).toBeDefined();
+        expect(response.body.data.data).toBeDefined();
+        expect(Array.isArray(response.body.data.data)).toBe(true);
+        expect(response.body.data.meta).toBeDefined();
+        expect(response.body.data.meta.total).toBeDefined();
+        expect(response.body.data.meta.currentPage).toBeDefined();
+        expect(response.body.data.meta.perPage).toBeDefined();
       }
     });
 
@@ -236,13 +240,16 @@ describe('UsersController (e2e)', () => {
         });
 
       if (response.status === 200) {
-        if (response.body && response.body.data && Array.isArray(response.body.data)) {
-          expect(Array.isArray(response.body.data)).toBe(true);
-          expect(response.body.data.length).toBeGreaterThan(0);
-        } else {
-          expect(Array.isArray(response.body)).toBe(true);
-          expect(response.body.length).toBeGreaterThan(0);
-        }
+        expect(response.body.error).toBeFalsy();
+        expect(response.body.message).toBe('Users retrieved successfully');
+        expect(response.body.data).toBeDefined();
+        expect(response.body.data.data).toBeDefined();
+        expect(Array.isArray(response.body.data.data)).toBe(true);
+        expect(response.body.data.data.length).toBeGreaterThan(0);
+        expect(response.body.data.meta).toBeDefined();
+        expect(response.body.data.meta.total).toBeDefined();
+        expect(response.body.data.meta.currentPage).toBeDefined();
+        expect(response.body.data.meta.perPage).toBeDefined();
       }
     });
 
