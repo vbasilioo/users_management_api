@@ -173,8 +173,10 @@ describe('UsersController', () => {
 
       const result = await usersController.findAll(query, mockRequest);
       
-      expect(Array.isArray(result)).toBe(true);
-      expect(result).toEqual(mockPaginatedResult.data);
+      expect(result).toBeInstanceOf(ApiResponseDto);
+      expect(result.error).toBeFalsy();
+      expect(result.message).toBe('Users retrieved successfully');
+      expect(result.data).toEqual(mockPaginatedResult);
       expect(findAllUsersUseCase.execute).toHaveBeenCalledWith(query);
     });
 
