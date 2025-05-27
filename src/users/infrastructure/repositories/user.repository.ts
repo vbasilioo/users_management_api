@@ -5,6 +5,8 @@ import { User } from '../../domain/entities/user.entity';
 import { CreateUserDto } from '../../application/dtos/create-user.dto';
 import { UpdateUserDto } from '../../application/dtos/update-user.dto';
 import * as bcrypt from 'bcrypt';
+import { FindAllUsersDto } from '../../application/dtos/find-all-users.dto';
+import { PaginatedResponse } from '../../domain/types/paginated-response.type';
 
 @Injectable()
 export class UserRepository {
@@ -13,8 +15,38 @@ export class UserRepository {
     private userRepository: Repository<User>,
   ) {}
 
-  async findAll(): Promise<User[]> {
-    return this.userRepository.find();
+  async findAll(params?: FindAllUsersDto): Promise<PaginatedResponse<User>> {
+    const { search, page = 1, perPage = 10 } = params || {};
+    
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    if (search) {
+      queryBuilder.where('(user.name LIKE :search OR user.email LIKE :search)', {
+        search: `%${search}%`,
+      });
+    }
+
+    const total = await queryBuilder.getCount();
+    const totalPages = Math.ceil(total / perPage);
+
+    queryBuilder
+      .skip((page - 1) * perPage)
+      .take(perPage)
+      .orderBy('user.createdAt', 'DESC');
+
+    const data = await queryBuilder.getMany();
+
+    return {
+      data,
+      meta: {
+        total,
+        currentPage: page,
+        perPage,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    };
   }
 
   async findById(id: string): Promise<User | null> {

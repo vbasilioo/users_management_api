@@ -13,6 +13,8 @@ import { FindAllUsersUseCase } from '../../application/use-cases/find-all-users.
 import { FindUserByIdUseCase } from '../../application/use-cases/find-user-by-id.use-case';
 import { UpdateUserUseCase } from '../../application/use-cases/update-user.use-case';
 import { RemoveUserUseCase } from '../../application/use-cases/remove-user.use-case';
+import { FindAllUsersDto } from '../../application/dtos/find-all-users.dto';
+import { ForbiddenException } from '@nestjs/common';
 
 const mockUsersService = () => ({
   findAll: jest.fn(),
@@ -120,7 +122,7 @@ describe('UsersController', () => {
   });
 
   describe('findAll', () => {
-    it('should return all users', async () => {
+    it('should return all users when admin requests', async () => {
       const mockUsers: User[] = [
         {
           id: '1',
@@ -142,7 +144,19 @@ describe('UsersController', () => {
         },
       ];
 
-      findAllUsersUseCase.execute.mockResolvedValue(mockUsers);
+      const mockPaginatedResult = {
+        data: mockUsers,
+        meta: {
+          total: 2,
+          currentPage: 1,
+          perPage: 10,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false
+        }
+      };
+
+      findAllUsersUseCase.execute.mockResolvedValue(mockPaginatedResult);
 
       const mockRequest = {
         user: {
@@ -151,13 +165,17 @@ describe('UsersController', () => {
         },
       };
 
-      const result = await usersController.findAll(mockRequest);
+      const query: FindAllUsersDto = {
+        page: 1,
+        perPage: 10,
+        search: 'user'
+      };
+
+      const result = await usersController.findAll(query, mockRequest);
       
-      expect(result).toBeInstanceOf(ApiResponseDto);
-      expect(result.error).toBeFalsy();
-      expect(result.message).toBe('Users retrieved successfully');
-      expect(result.data).toEqual(mockUsers);
-      expect(findAllUsersUseCase.execute).toHaveBeenCalled();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toEqual(mockPaginatedResult.data);
+      expect(findAllUsersUseCase.execute).toHaveBeenCalledWith(query);
     });
 
     it('should return error when regular user tries to access all users', async () => {
@@ -168,11 +186,9 @@ describe('UsersController', () => {
         },
       };
 
-      const result = await usersController.findAll(mockRequest);
-      
-      expect(result).toBeInstanceOf(ApiResponseDto);
-      expect(result.error).toBeTruthy();
-      expect(result.message).toBe('Only admin and manager roles can access the list of all users');
+      const query: FindAllUsersDto = {};
+
+      await expect(usersController.findAll(query, mockRequest)).rejects.toThrow(ForbiddenException);
       expect(findAllUsersUseCase.execute).not.toHaveBeenCalled();
     });
   });

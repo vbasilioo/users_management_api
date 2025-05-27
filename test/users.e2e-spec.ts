@@ -250,9 +250,7 @@ describe('UsersController (e2e)', () => {
       await request(app.getHttpServer())
         .get('/users')
         .set('Authorization', `Bearer ${userToken}`)
-        .expect(response => {
-          expect([403, 500]).toContain(response.status);
-        });
+        .expect(403);
     });
   });
 

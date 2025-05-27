@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards, Query, ForbiddenException } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { CreateUserDto } from '../../application/dtos/create-user.dto';
 import { UpdateUserDto } from '../../application/dtos/update-user.dto';
 import { User, UserRole } from '../../domain/entities/user.entity';
@@ -12,7 +12,7 @@ import { FindAllUsersUseCase } from '../../application/use-cases/find-all-users.
 import { FindUserByIdUseCase } from '../../application/use-cases/find-user-by-id.use-case';
 import { UpdateUserUseCase } from '../../application/use-cases/update-user.use-case';
 import { RemoveUserUseCase } from '../../application/use-cases/remove-user.use-case';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { FindAllUsersDto } from '../../application/dtos/find-all-users.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -49,10 +49,13 @@ export class UsersController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all users' })
+  @ApiOperation({ summary: 'Get all users with optional search and pagination' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term to filter users' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (starts from 1)', type: Number })
+  @ApiQuery({ name: 'perPage', required: false, description: 'Number of items per page', type: Number })
   @ApiResponse({
     status: 200,
-    description: 'List of users',
+    description: 'List of users with pagination info',
     type: ApiResponseDto,
   })
   @ApiResponse({
@@ -61,15 +64,15 @@ export class UsersController {
   })
   @UseGuards(AbilityGuard)
   @CheckAbility((ability: AppAbility) => ability.can(Action.Read, 'User'))
-  async findAll(@Req() req): Promise<ApiResponseDto<User[]>> {
+  async findAll(@Query() query: FindAllUsersDto, @Req() req): Promise<User[]> {
     const currentUser = req.user;
     
     if (currentUser.role === UserRole.USER) {
-      throw new HttpException('Only admin and manager roles can access the list of all users', HttpStatus.FORBIDDEN);
+      throw new ForbiddenException('Only admin and manager roles can access the list of all users');
     }
     
-    const users = await this.findAllUsersUseCase.execute();
-    return ApiResponseDto.success('Users retrieved successfully', users);
+    const result = await this.findAllUsersUseCase.execute(query);
+    return result.data;
   }
 
   @Get('me')
@@ -112,7 +115,9 @@ export class UsersController {
     const currentUser = req.user;
     
     if (currentUser.id !== id && currentUser.role === UserRole.USER) {
-      throw new HttpException('You can only view your own profile', HttpStatus.FORBIDDEN);
+      return ApiResponseDto.error<User>(
+        'You can only view your own profile'
+      );
     }
     
     const user = await this.findUserByIdUseCase.execute(id);
@@ -144,7 +149,9 @@ export class UsersController {
     const currentUser = req.user;
     
     if (currentUser.id !== id && currentUser.role === UserRole.USER) {
-      throw new HttpException('You can only update your own profile', HttpStatus.FORBIDDEN);
+      return ApiResponseDto.error<User>(
+        'You can only update your own profile'
+      );
     }
     
     if (updateUserDto.role && currentUser.role !== UserRole.ADMIN) {

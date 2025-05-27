@@ -8,6 +8,8 @@ import { FindAllUsersUseCase } from '../use-cases/find-all-users.use-case';
 import { CreateUserUseCase } from '../use-cases/create-user.use-case';
 import { UpdateUserUseCase } from '../use-cases/update-user.use-case';
 import { RemoveUserUseCase } from '../use-cases/remove-user.use-case';
+import { FindAllUsersDto } from '../dtos/find-all-users.dto';
+import { PaginatedResponse } from '../../domain/types/paginated-response.type';
 
 @Injectable()
 export class UsersService {
@@ -20,8 +22,8 @@ export class UsersService {
     private removeUserUseCase: RemoveUserUseCase
   ) {}
 
-  async findAll(): Promise<User[]> {
-    return this.findAllUsersUseCase.execute();
+  async findAll(params?: FindAllUsersDto): Promise<PaginatedResponse<User>> {
+    return this.findAllUsersUseCase.execute(params);
   }
 
   async findById(id: string): Promise<User> {
