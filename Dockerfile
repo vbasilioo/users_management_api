@@ -7,6 +7,7 @@ RUN apk add --no-cache netcat-openbsd
 
 COPY package*.json ./
 COPY pnpm-lock.yaml ./
+COPY docker-entrypoint.sh ./
 
 RUN npm install -g pnpm
 RUN pnpm install

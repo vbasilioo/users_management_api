@@ -32,7 +32,9 @@ export class UserRepository {
     queryBuilder
       .skip((page - 1) * perPage)
       .take(perPage)
-      .orderBy('user.createdAt', 'DESC');
+      .orderBy('CASE WHEN user.role = :adminRole THEN 1 ELSE 2 END', 'ASC')
+      .addOrderBy('user.createdAt', 'DESC')
+      .setParameter('adminRole', 'admin');
 
     const data = await queryBuilder.getMany();
 
